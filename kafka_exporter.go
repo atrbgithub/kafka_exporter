@@ -340,9 +340,6 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 		plog.Errorf("Cannot get topics: %v", err)
 		return
 	}
-	for _, broker := range e.client.Brokers() {
-		partitionLeaders[broker.ID()] = make(map[string][]int32, len(topics))
-	}
 
 	topicChannel := make(chan string)
 	getTopicMetrics := func(topic string) {
@@ -366,6 +363,9 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 				plog.Errorf("Cannot get leader of topic %s partition %d: %v", topic, partition, err)
 			} else {
 				e.sgPartitionLeadersMutex.Lock()
+				if _, ok := partitionLeaders[broker.ID()]; !ok {
+					partitionLeaders[broker.ID()] = make(map[string][]int32, len(topics))
+				}
 				partitionLeaders[broker.ID()][topic] = append(partitionLeaders[broker.ID()][topic], partition)
 				e.sgPartitionLeadersMutex.Unlock()
 				ch <- prometheus.MustNewConstMetric(
