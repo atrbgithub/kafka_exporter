@@ -607,16 +607,17 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 		describeLogDirs, err := broker.DescribeLogDirs(&sarama.DescribeLogDirsRequest{Version: 1, DescribeTopics: partitionArr})
 		if err != nil {
 			plog.Errorf("Error describe log dirs: %v", err)
-		}
-		e.sgPartitionsMutex.Lock()
-		for _, logDir := range describeLogDirs.LogDirs {
-			for _, topic4size := range logDir.Topics {
-				for _, partition4size := range topic4size.Partitions {
-					locPartitionSizes[topic4size.Topic][partition4size.PartitionID] = partition4size.Size
+		} else {
+			e.sgPartitionsMutex.Lock()
+			for _, logDir := range describeLogDirs.LogDirs {
+				for _, topic4size := range logDir.Topics {
+					for _, partition4size := range topic4size.Partitions {
+						locPartitionSizes[topic4size.Topic][partition4size.PartitionID] = partition4size.Size
+					}
 				}
 			}
+			e.sgPartitionsMutex.Unlock()
 		}
-		e.sgPartitionsMutex.Unlock()
 	}
 
 	plog.Info("Fetching consumer group metrics")
