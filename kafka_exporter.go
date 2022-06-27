@@ -612,7 +612,9 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 			for _, logDir := range describeLogDirs.LogDirs {
 				for _, topic4size := range logDir.Topics {
 					for _, partition4size := range topic4size.Partitions {
-						locPartitionSizes[topic4size.Topic][partition4size.PartitionID] = partition4size.Size
+						if _, ok := locPartitionSizes[topic4size.Topic]; ok {
+							locPartitionSizes[topic4size.Topic][partition4size.PartitionID] = partition4size.Size
+						}
 					}
 				}
 			}
@@ -634,8 +636,10 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 	plog.Info("Fetching partition size metrics")
 	if len(e.client.Brokers()) > 0 {
 		for _, broker := range e.client.Brokers() {
-			wg.Add(1)
-			go getPartitionSizeMetrics(broker, partitionLeaders[broker.ID()], partitionSizes)
+			if len(partitionLeaders[broker.ID()]) > 0 {
+				wg.Add(1)
+				go getPartitionSizeMetrics(broker, partitionLeaders[broker.ID()], partitionSizes)
+			}
 		}
 		wg.Wait()
 		for topic, partitions := range partitionSizes {
